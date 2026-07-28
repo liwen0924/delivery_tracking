@@ -60,7 +60,7 @@ export function TransitionMenu({ shipment, lifecycle, busy, onSelect }: Props) {
       {open && (
         <div
           role="menu"
-          className="animate-fade-in-up absolute right-0 z-20 mt-1 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+          className="animate-fade-in-up absolute right-0 z-20 mt-1 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg sm:w-80"
         >
           {shipment.allowed_transitions.map((option) => {
             const target = stateOf(lifecycle, option.target)
@@ -69,7 +69,7 @@ export function TransitionMenu({ shipment, lifecycle, busy, onSelect }: Props) {
                 key={option.target}
                 type="button"
                 role="menuitem"
-                className="flex w-full items-start gap-2.5 px-3 py-2 text-left hover:bg-slate-50"
+                className="flex w-full items-start gap-2.5 whitespace-normal px-3 py-2.5 text-left hover:bg-slate-50"
                 onClick={() => {
                   setOpen(false)
                   onSelect(option)
@@ -81,7 +81,7 @@ export function TransitionMenu({ shipment, lifecycle, busy, onSelect }: Props) {
                 />
                 <span className="min-w-0">
                   <span className="block text-sm font-medium text-slate-800">{option.label}</span>
-                  <span className="block text-xs text-slate-500">
+                  <span className="mt-0.5 block break-words text-xs leading-relaxed text-slate-500">
                     {option.requires_reason ? 'Requires a reason' : target.description}
                   </span>
                 </span>
