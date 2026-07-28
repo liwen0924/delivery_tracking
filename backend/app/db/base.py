@@ -22,9 +22,11 @@ class Base(DeclarativeBase):
 
 
 class TimestampMixin:
+    # Row creation time (set once by the database on INSERT).
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    # Last modification time; refreshed by SQLAlchemy on UPDATE.
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
