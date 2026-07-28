@@ -24,3 +24,6 @@ curl -s -w '\nHTTP %{http_code}\n' -X POST "localhost:8000/api/v1/shipments/$ID/
   -H 'Content-Type: application/json' \
   -d '{"status":"delivered"}'
 ```
+
+## Todo
+We may extend the state graph.
