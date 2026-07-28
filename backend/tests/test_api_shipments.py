@@ -81,7 +81,11 @@ async def test_search_matches_reference_or_customer(client, seeded):
 
 async def test_list_rows_carry_their_legal_next_steps(client, seeded):
     created = await _get_shipment(client, "TV-9001")
-    assert {t["target"] for t in created["allowed_transitions"]} == {"picked_up", "failed"}
+    assert {t["target"] for t in created["allowed_transitions"]} == {
+        "picked_up",
+        "canceled",
+        "failed",
+    }
     assert created["is_terminal"] is False
 
     delivered = await _get_shipment(client, "TV-9004")
@@ -96,7 +100,10 @@ async def test_summary_counts_every_configured_status(client, seeded):
         "created": 1,
         "picked_up": 1,
         "in_transit": 1,
+        "intercepted": 0,
         "delivered": 1,
+        "returned": 0,
+        "canceled": 0,
         "failed": 1,
     }
 
@@ -135,7 +142,7 @@ async def test_invalid_transition_is_rejected_with_409_and_guidance(client, seed
     error = response.json()["error"]
     assert error["code"] == "invalid_transition"
     assert "created" in error["message"] and "delivered" in error["message"]
-    assert set(error["details"]["allowed_targets"]) == {"picked_up", "failed"}
+    assert set(error["details"]["allowed_targets"]) == {"picked_up", "canceled", "failed"}
 
     # And nothing was written.
     assert (await _get_shipment(client, "TV-9001"))["status"] == "created"
@@ -240,9 +247,16 @@ async def test_history_is_paginated_and_newest_first(client, seeded):
 async def test_lifecycle_endpoint_describes_the_graph(client):
     body = (await client.get(f"{API}/lifecycle")).json()
     assert body["initial_state"] == "created"
-    assert len(body["transitions"]) == 6
+    assert len(body["transitions"]) == 10
+    codes = {state["code"] for state in body["states"]}
+    assert {"intercepted", "returned", "canceled"}.issubset(codes)
     failed = next(state for state in body["states"] if state["code"] == "failed")
     assert failed["terminal"] is True
+    returned = next(state for state in body["states"] if state["code"] == "returned")
+    assert returned["terminal"] is True
+    canceled = next(state for state in body["states"] if state["code"] == "canceled")
+    assert canceled["terminal"] is True
+
 
 
 @pytest.mark.parametrize("path", ["/health", "/ready"])

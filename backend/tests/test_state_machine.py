@@ -16,25 +16,40 @@ from app.domain.errors import (
 )
 from app.domain.state_machine import StateMachine
 
-ALL_STATUSES = ["created", "picked_up", "in_transit", "delivered", "failed"]
+ALL_STATUSES = [
+    "created",
+    "picked_up",
+    "in_transit",
+    "intercepted",
+    "delivered",
+    "returned",
+    "canceled",
+    "failed",
+]
 
-# The full adjacency matrix from the brief:
+# The full adjacency matrix:
 #   created -> picked_up -> in_transit -> delivered
-#   failed reachable from every non-delivered status
+#   created -> canceled
+#   picked_up -> intercepted -> returned
+#   failed reachable from every non-terminal status
 LEGAL_EDGES = {
     ("created", "picked_up"),
+    ("created", "canceled"),
     ("created", "failed"),
     ("picked_up", "in_transit"),
+    ("picked_up", "intercepted"),
     ("picked_up", "failed"),
     ("in_transit", "delivered"),
     ("in_transit", "failed"),
+    ("intercepted", "returned"),
+    ("intercepted", "failed"),
 }
 
 
 @pytest.mark.parametrize("source", ALL_STATUSES)
 @pytest.mark.parametrize("target", ALL_STATUSES)
 def test_transition_matrix_matches_the_brief(lifecycle, source, target):
-    """Every one of the 25 source/target pairs is allowed exactly when it should be."""
+    """Every source/target pair is allowed exactly when it should be."""
     assert lifecycle.can(source, target) is ((source, target) in LEGAL_EDGES)
 
 
@@ -55,7 +70,7 @@ def test_skipping_a_step_is_rejected_with_a_useful_message(lifecycle):
     error = excinfo.value
     assert "created" in error.message and "delivered" in error.message
     # The error tells the caller what *would* have worked.
-    assert set(error.details["allowed_targets"]) == {"picked_up", "failed"}
+    assert set(error.details["allowed_targets"]) == {"picked_up", "canceled", "failed"}
 
 
 def test_backwards_transitions_are_rejected(lifecycle):
@@ -63,7 +78,7 @@ def test_backwards_transitions_are_rejected(lifecycle):
         lifecycle.validate("in_transit", "picked_up")
 
 
-@pytest.mark.parametrize("terminal", ["delivered", "failed"])
+@pytest.mark.parametrize("terminal", ["delivered", "returned", "canceled", "failed"])
 def test_terminal_states_have_no_way_out(lifecycle, terminal):
     assert lifecycle.is_terminal(terminal)
     assert lifecycle.allowed_transitions(terminal) == ()
@@ -72,13 +87,40 @@ def test_terminal_states_have_no_way_out(lifecycle, terminal):
     assert excinfo.value.details["terminal"] is True
 
 
+def test_intercept_path_is_walkable(lifecycle):
+    transition = lifecycle.validate("picked_up", "intercepted")
+    assert transition.event == "intercept"
+    transition = lifecycle.validate("intercepted", "returned")
+    assert transition.event == "return"
+    assert lifecycle.is_terminal("returned")
+
+
+def test_only_picked_up_can_enter_intercepted(lifecycle):
+    for source in ALL_STATUSES:
+        if source == "picked_up":
+            continue
+        assert not lifecycle.can(source, "intercepted")
+
+
+def test_only_intercepted_can_enter_returned(lifecycle):
+    for source in ALL_STATUSES:
+        if source == "intercepted":
+            continue
+        assert not lifecycle.can(source, "returned")
+
+
+def test_created_can_be_canceled(lifecycle):
+    assert lifecycle.validate("created", "canceled").event == "cancel"
+    assert lifecycle.is_terminal("canceled")
+
+
 def test_delivered_cannot_be_failed(lifecycle):
     """The `except:` list in the config is what stops this."""
     assert not lifecycle.can("delivered", "failed")
 
 
-@pytest.mark.parametrize("source", ["created", "picked_up", "in_transit"])
-def test_failure_is_reachable_from_every_non_delivered_state(lifecycle, source):
+@pytest.mark.parametrize("source", ["created", "picked_up", "in_transit", "intercepted"])
+def test_failure_is_reachable_from_every_non_terminal_state(lifecycle, source):
     assert lifecycle.validate(source, "failed", reason="Address not found").event == "fail"
 
 

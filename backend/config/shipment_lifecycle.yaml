@@ -33,11 +33,28 @@ states:
     description: Moving through the network towards the delivery address.
     tone: progress
 
+  - code: intercepted
+    label: Intercepted
+    description: Stopped in the network for interception; awaiting return.
+    tone: progress
+
   - code: delivered
     label: Delivered
     description: Handed over to the recipient. Terminal, happy path.
     terminal: true
     tone: success
+
+  - code: returned
+    label: Returned
+    description: Intercepted shipment returned to origin. Terminal.
+    terminal: true
+    tone: success
+
+  - code: canceled
+    label: Canceled
+    description: Booking cancelled before pickup. Terminal.
+    terminal: true
+    tone: neutral
 
   - code: failed
     label: Failed
@@ -51,23 +68,38 @@ transitions:
     from: created
     to: picked_up
 
+  - event: cancel
+    label: Mark canceled
+    from: created
+    to: canceled
+
   - event: depart
     label: Mark in transit
     from: picked_up
     to: in_transit
+
+  - event: intercept
+    label: Mark intercepted
+    from: picked_up
+    to: intercepted
 
   - event: deliver
     label: Mark delivered
     from: in_transit
     to: delivered
 
-  # "failed is allowed from any non-delivered status". Expressed as a wildcard
+  - event: return
+    label: Mark returned
+    from: intercepted
+    to: returned
+
+  # "failed is allowed from any non-terminal status". Expressed as a wildcard
   # so the rule survives new states being added above it; `except` keeps the
   # exclusions explicit rather than hidden in code.
   - event: fail
     label: Mark failed
     from: "*"
-    except: [delivered, failed]
+    except: [delivered, returned, canceled, failed]
     to: failed
     guards: [require_reason]
     description: Requires a reason so the failure is auditable.
