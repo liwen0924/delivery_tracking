@@ -1,0 +1,21 @@
+reference,customer_name,status
+TV-1001,Summit Logistics,picked_up
+TV-1002,Eastlink Retail,created
+TV-1003,Baywater Supplies,created
+TV-1004,Northern Trading,created
+TV-1005,Silverline Trading,delivered
+TV-1006,Eastlink Foods,created
+TV-1007,Riverside Textiles,in_transit
+TV-1008,Golden Trading,in_transit
+TV-1009,Summit Freight,in_transit
+TV-1010,Coastal Electronics,created
+TV-1011,Sunrise Pharma,delivered
+TV-1012,Harbour Pharma,in_transit
+TV-1013,Baywater Trading,created
+TV-1014,Eastlink Motors,created
+TV-1015,Eastlink Packaging,in_transit
+TV-1016,Sunrise Hardware,picked_up
+TV-1017,Coastal Wholesale,in_transit
+TV-1018,Harbour Electronics,picked_up
+TV-1019,Riverside Foods,picked_up
+TV-1020,Ironbark Packaging,created

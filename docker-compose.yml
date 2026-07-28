@@ -1,0 +1,62 @@
+# One command brings up the whole demo:
+#
+#     docker compose up --build      (or: make up)
+#
+# Startup order is enforced with health checks, so the UI is only reachable
+# once the API has migrated the schema and loaded shipments.csv.
+
+name: delivery-tracker
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: tracker
+      POSTGRES_PASSWORD: tracker
+      POSTGRES_DB: tracker
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tracker -d tracker']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  api:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://tracker:tracker@db:5432/tracker
+      TEST_DATABASE_URL: postgresql+asyncpg://tracker:tracker@db:5432/tracker_test
+      ENVIRONMENT: docker
+    ports:
+      - '${API_PORT:-8000}:8000'
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python -c "import urllib.request,sys;
+          sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/ready', timeout=3).status == 200 else 1)"
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  web:
+    build:
+      context: ./frontend
+    ports:
+      - '${WEB_PORT:-5173}:80'
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  db-data:
