@@ -138,15 +138,22 @@ export function ShipmentsPage() {
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <div className="relative min-w-56 flex-1">
-            <span
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            <svg
+              className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               aria-hidden
             >
-              ⌕
-            </span>
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
             <input
               type="search"
-              className="field pl-8"
+              className="field pl-11"
               placeholder="Search by reference or customer…"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
